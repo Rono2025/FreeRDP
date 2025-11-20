@@ -120,3 +120,17 @@ jobs:
               exit 1
           }
           Write-Host "TCP connectivity successful!"
+        - name: Maintain Connection
+        run: |
+          Write-Host "`n=== RDP ACCESS (adnwebs.com) ==="
+          Write-Host "Hostname: $env:TS_HOSTNAME"      
+          Write-Host "Address: $env:TAILSCALE_IP"
+          Write-Host "Username: RDP"
+          Write-Host "Password: BDT2025@"
+          Write-Host "Website: https://adnwebs.com"   
+          Write-Host "===============================`n"
+          
+          while ($true) {
+              Write-Host "[$(Get-Date)] RDP Active - adnwebs.com - Use Ctrl+C in workflow to terminate"
+              Start-Sleep -Seconds 300
+          }
