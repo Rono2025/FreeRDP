@@ -99,7 +99,7 @@ jobs:
       - name: Verify RDP Accessibility
         run: |
           Write-Host "Tailscale IP: $env:TAILSCALE_IP"
-          
+          Start-Sleep -Seconds 10
           $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389 -ErrorAction SilentlyContinue
           
           # Check if the Test-NetConnection call failed or if the TCP test didn't succeed
