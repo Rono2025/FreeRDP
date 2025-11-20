@@ -1,4 +1,4 @@
-name: RDP 
+name: RDP
 
 on:
   workflow_dispatch:
@@ -9,6 +9,10 @@ jobs:
     timeout-minutes: 3600
 
     steps:
+      - name: Set up job
+        # A placeholder step that often runs implicitly but is good practice to include
+        run: Write-Host "Starting RDP setup job..."
+
       - name: Configure Core RDP Settings
         run: |
           # Set custom PC name (branding)
@@ -66,7 +70,8 @@ jobs:
           $installerPath = "$env:TEMP\tailscale.msi"
           
           Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
-          Start-Process msiexec.exe -ArgumentList "/i", ""$installerPath"", "/quiet", "/norestart" -Wait
+          # CORRECTED: Removed extra double quotes "" around $installerPath
+          Start-Process msiexec.exe -ArgumentList "/i", "$installerPath", "/quiet", "/norestart" -Wait
           Remove-Item $installerPath -Force
 
       - name: Establish Tailscale Connection
@@ -95,24 +100,11 @@ jobs:
         run: |
           Write-Host "Tailscale IP: $env:TAILSCALE_IP"
           
-          $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389
-          if (-not $testResult.TcpTestSucceeded) {
+          $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389 -ErrorAction SilentlyContinue
+          
+          # Check if the Test-NetConnection call failed or if the TCP test didn't succeed
+          if ($LASTEXITCODE -ne 0 -or -not $testResult.TcpTestSucceeded) {
               Write-Error "TCP connection to RDP port 3389 failed"
               exit 1
           }
           Write-Host "TCP connectivity successful!"
-
-      - name: Maintain Connection
-        run: |
-          Write-Host "`n=== RDP ACCESS (adnwebs.com) ==="
-          Write-Host "Hostname: $env:TS_HOSTNAME"
-          Write-Host "Address: $env:TAILSCALE_IP"
-          Write-Host "Username: RDP"
-          Write-Host "Password: $(echo $env:RDP_CREDS)"
-          Write-Host "Website: https://adnwebs.com"
-          Write-Host "===============================`n"
-          
-          while ($true) {
-              Write-Host "[$(Get-Date)] RDP Active - adnwebs.com - Use Ctrl+C in workflow to terminate"
-              Start-Sleep -Seconds 300
-          }
