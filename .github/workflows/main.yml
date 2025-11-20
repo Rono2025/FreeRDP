@@ -18,20 +18,29 @@ jobs:
           # Set custom PC name (branding)
           Rename-Computer -NewName "adnwebs" -Force
 
-          # Enable Remote Desktop and disable Network Level Authentication (if needed)
+          
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
                              -Name "fDenyTSConnections" -Value 0 -Force
+          
+          
+          Set-WmiInstance -Class "Win32_TerminalServiceSetting" -Namespace "Root\CimV2\TerminalServices" `
+            -Argument @{AllowTSConnections=1}
+            
+          
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
                              -Name "UserAuthentication" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
                              -Name "SecurityLayer" -Value 0 -Force
 
-          # Remove any existing rule with the same name to avoid duplication
+          
           netsh advfirewall firewall delete rule name="RDP-Tailscale"
           
-          # Allow incoming RDP (TCP 3389)
+          
+          Set-NetFirewallRule -DisplayGroup "Remote Desktop" -Enabled True 
+          
+          
           netsh advfirewall firewall add rule name="RDP-Tailscale" `
-            dir=in action=allow protocol=TCP localport=3389
+            dir=in action=allow protocol=TCP localport=3389 profile=any
 
           # Restart Remote Desktop service to apply changes
           Restart-Service -Name TermService -Force
@@ -99,12 +108,14 @@ jobs:
       - name: Verify RDP Accessibility
         run: |
           Write-Host "Tailscale IP: $env:TAILSCALE_IP"
-          Start-Sleep -Seconds 10
           
-          $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389 -ErrorAction SilentlyContinue
           
-          # Check if the Test-NetConnection call failed or if the TCP test didn't succeed
-          if ($LASTEXITCODE -ne 0 -or -not $testResult.TcpTestSucceeded) {
+          Start-Sleep -Seconds 15
+          
+                    
+          $testResult = Test-NetConnection -ComputerName $env:TAILSCALE_IP -Port 3389 -InformationLevel Detailed -WarningAction SilentlyContinue
+          
+          if (-not $testResult.TcpTestSucceeded) {
               Write-Error "TCP connection to RDP port 3389 failed"
               exit 1
           }
